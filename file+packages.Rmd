@@ -1,0 +1,273 @@
+---
+title: "R Notebook"
+output: github_document
+---
+
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/071/SRR13079471/SRR13079471_1.fastq.gz
+```
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/072/SRR13079472/SRR13079472_1.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/071/SRR13079471/SRR13079471_2.fastq.gz
+```
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/072/SRR13079472/SRR13079472_2.fastq.gz
+```
+
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/073/SRR13079473/SRR13079473_1.fastq.gz
+```
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/074/SRR13079474/SRR13079474_1.fastq.gz
+```
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/075/SRR13079475/SRR13079475_1.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/076/SRR13079476/SRR13079476_1.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/077/SRR13079477/SRR13079477_1.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/078/SRR13079478/SRR13079478_1.fastq.gz
+```
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/079/SRR13079479/SRR13079479_1.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/080/SRR13079480/SRR13079480_1.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/073/SRR13079473/SRR13079473_2.fastq.gz
+```
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/074/SRR13079474/SRR13079474_2.fastq.gz
+```
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/075/SRR13079475/SRR13079475_2.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/076/SRR13079476/SRR13079476_2.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/077/SRR13079477/SRR13079477_2.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/078/SRR13079478/SRR13079478_2.fastq.gz
+```
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/079/SRR13079479/SRR13079479_2.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/080/SRR13079480/SRR13079480_2.fastq.gz
+```
+
+
+```{r}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+BiocManager::install("BiocStyle")
+```
+```{bash}
+sudo apt-get update -y
+sudo apt-get install -y libglpk-dev 
+sudo apt-get install -y liblzma-dev libbz2-dev
+```
+```{r}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("BiocStyle")
+BiocManager::install("Rhtslib")
+```
+```{r}
+library("knitr")
+library("BiocStyle")
+.cran_packages <- c("ggplot2", "gridExtra", "devtools")
+install.packages(.cran_packages) 
+.bioc_packages <- c("dada2", "phyloseq", "DECIPHER", "phangorn")
+BiocManager::install(.bioc_packages)
+# Load packages into session, and print package version
+sapply(c(.cran_packages, .bioc_packages), require, character.only = TRUE)
+```
+
+```{r}
+.cran_packages <- c( "shiny","miniUI", "caret", "pls", "e1071", "ggplot2", "randomForest", "dplyr", "ggrepel", "nlme", "devtools",
+                  "reshape2", "PMA", "structSSI", "ade4",
+                  "ggnetwork", "intergraph", "scales")
+.github_packages <- c("jfukuyama/phyloseqGraphTest")
+.bioc_packages <- c("genefilter", "impute")
+```
+```{r}
+.inst <- .cran_packages %in% installed.packages()
+if (any(!.inst)){
+  install.packages(.cran_packages[!.inst],repos = "http://cran.rstudio.com/")
+}
+```
+```{r}
+.inst <- .github_packages %in% installed.packages()
+if (any(!.inst)){
+  devtools::install_github(.github_packages[!.inst])
+}
+```
+
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/081/SRR13079481/SRR13079481_1.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/082/SRR13079482/SRR13079482_1.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/083/SRR13079483/SRR13079483_1.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/084/SRR13079484/SRR13079484_1.fastq.gz
+```
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/085/SRR13079485/SRR13079485_1.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/086/SRR13079486/SRR13079486_1.fastq.gz
+```
+
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/087/SRR13079487/SRR13079487_1.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/088/SRR13079488/SRR13079488_1.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/089/SRR13079489/SRR13079489_1.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/090/SRR13079490/SRR13079490_1.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/091/SRR13079491/SRR13079491_1.fastq.gz
+```
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/092/SRR13079492/SRR13079492_1.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/093/SRR13079493/SRR13079493_1.fastq.gz
+```
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/094/SRR13079494/SRR13079494_1.fastq.gz
+```
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/095/SRR13079495/SRR13079495_1.fastq.gz
+```
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/096/SRR13079496/SRR13079496_1.fastq.gz
+```
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/097/SRR13079497/SRR13079497_1.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/098/SRR13079498/SRR13079498_1.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/099/SRR13079499/SRR13079499_1.fastq.gz
+```
+
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/000/SRR13079500/SRR13079500_1.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/081/SRR13079481/SRR13079481_2.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/082/SRR13079482/SRR13079482_2.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/083/SRR13079483/SRR13079483_2.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/084/SRR13079484/SRR13079484_2.fastq.gz
+```
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/085/SRR13079485/SRR13079485_2.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/086/SRR13079486/SRR13079486_2.fastq.gz
+```
+
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/087/SRR13079487/SRR13079487_2.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/088/SRR13079488/SRR13079488_2.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/089/SRR13079489/SRR13079489_2.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/090/SRR13079490/SRR13079490_2.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/091/SRR13079491/SRR13079491_2.fastq.gz
+```
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/092/SRR13079492/SRR13079492_2.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/093/SRR13079493/SRR13079493_2.fastq.gz
+```
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/094/SRR13079494/SRR13079494_2.fastq.gz
+```
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/095/SRR13079495/SRR13079495_2.fastq.gz
+```
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/096/SRR13079496/SRR13079496_2.fastq.gz
+```
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/097/SRR13079497/SRR13079497_2.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/098/SRR13079498/SRR13079498_2.fastq.gz
+```
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/099/SRR13079499/SRR13079499_2.fastq.gz
+```
+
+
+```{bash}
+wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR130/000/SRR13079500/SRR13079500_2.fastq.gz
+```
+
+```{r}
+.inst <- .bioc_packages %in% installed.packages()
+if(any(!.inst)){BiocManager::install(.bioc_packages[!.inst])
+}
+```
