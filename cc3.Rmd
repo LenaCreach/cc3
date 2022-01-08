@@ -1,0 +1,308 @@
+---
+title: "R Notebook"
+output: github_document
+---
+
+
+```{r}
+library("knitr")
+library("BiocStyle")
+.cran_packages <- c("ggplot2", "gridExtra")
+.bioc_packages <- c("dada2", "phyloseq", "DECIPHER", "phangorn")
+# Load packages into session, and print package version
+sapply(c(.cran_packages, .bioc_packages), require, character.only = TRUE)
+```
+
+
+
+```{r}
+set.seed(100)
+foraminifere <- "/home/rstudio/mydatalocal/cc3/foraminifère"
+list.files(foraminifere)
+```
+
+```{r}
+# Sort ensures forward/reverse reads are in same order
+FNFS <- sort(list.files(foraminifere, pattern="_1.fastq"))
+FNRS <- sort(list.files(foraminifere, pattern="_2.fastq"))
+# Extract sample names, assuming filenames have format: SAMPLENAME_XXX.fastq
+Sample_Names <- sapply(strsplit(FNFS, "_"), `[`, 1)
+# Specify the full path to the fnFs and fnRs
+FNFS <- file.path(foraminifere, FNFS)
+FNRS <- file.path(foraminifere, FNRS)
+FNFS[1:3]
+```
+```{r}
+plotQualityProfile(FNFS[1:2])
+```
+```{r}
+plotQualityProfile(FNRS[1:2])
+```
+```{r}
+FILT_path <- file.path(foraminifere, "filtered") # Place filtered files in filtered/ subdirectory
+if(!file_test("-d", FILT_path)) dir.create(FILT_path)
+FILTFS <- file.path(FILT_path, paste0(Sample_Names, "_f_filt.fastq.gz"))
+FILTRS <- file.path(FILT_path, paste0(Sample_Names, "_r_filt.fastq.gz"))
+```
+
+```{r}
+names(FILTFS)<- Sample_Names
+names(FILTRS)<- Sample_Names
+```
+
+```{r}
+out2 <- filterAndTrim(FNFS, FILTFS, FNRS, FILTRS, maxN = 0, truncQ = 2, rm.phix = TRUE, compress=FALSE, multithread = TRUE)
+head(out2)
+```
+  
+```{r}
+DEREPFS <- derepFastq(FILTFS, verbose=TRUE)
+DEREPRS <- derepFastq(FILTRS, verbose=TRUE)
+# Name the derep-class objects by the sample names
+names(DEREPFS) <- Sample_Names
+names(DEREPRS) <- Sample_Names
+```
+
+```{r}
+errF <- learnErrors(FILTFS, multithread=TRUE)
+```
+
+```{r}
+errR <- learnErrors(FILTRS, multithread=TRUE)
+```
+
+```{r}
+plotErrors(errF)
+plotErrors(errR)
+```
+
+```{r}
+DADAFS <- dada(DEREPFS, err=errF, multithread=TRUE)
+```
+
+```{r}
+DADARS <- dada(DEREPRS, err=errR, multithread=TRUE)
+```
+
+```{r}
+mergers <- mergePairs(DADAFS, DEREPFS, DADARS, DEREPRS)
+```
+
+```{r}
+SeqtabAll <- makeSequenceTable(mergers[!grepl("Mock", names(mergers))])
+table(nchar(getSequences(SeqtabAll)))
+```
+
+```{r}
+SeqtabNoC <- removeBimeraDenovo(SeqtabAll)
+```
+
+```{bash}
+cd ~
+wget  https://zenodo.org/record/4587955/files/silva_nr99_v138.1_train_set.fa.gz
+```
+
+```{r}
+FastaRef <- "/home/rstudio/silva_nr99_v138.1_train_set.fa.gz"
+TaxTab <- assignTaxonomy(SeqtabNoC, refFasta=FastaRef, multithread=TRUE)
+unname(head(taxTab))
+```
+
+```{r}
+SEQS <- getSequences(SeqtabNoC)
+names(SEQS) <- SEQS # This propagates to the tip labels of the tree
+Alignment <- AlignSeqs(DNAStringSet(SEQS), anchor=NA,verbose=FALSE)
+```
+
+```{r}
+PhangAlign <- phyDat(as(Alignment, "matrix"), type="DNA")
+DM <- dist.ml(PhangAlign)
+TREENJ <- NJ(DM) # Note, tip order != sequence order
+Fit = pml(TREENJ, data=PhangAlign)
+FitGTR <- update(Fit, k=4, inv=0.2)
+FitGTR <- optim.pml(FitGTR, model="GTR", optInv=TRUE, optGamma=TRUE,
+        rearrangement = "stochastic", control = pml.control(trace = 0))
+detach("package:phangorn", unload=TRUE)
+```
+
+```{r}
+SAMDF <- read.csv("data_ters.csv",header=TRUE)
+all(rownames(SeqtabAll) %in% SAMDF$Run) # TRUE
+```
+
+```{r}
+SAMDF <- read.csv("data_ters.csv",header=TRUE)
+SAMDF$Run <- paste0(gsub("00", "", SAMDF$sample_number), "D", SAMDF$host)
+SAMDF <- SAMDF[!duplicated(SAMDF$sample_number),] # Remove dupicate entries for reverse reads
+rownames(SeqtabAll) <- gsub("124", "125", rownames(SeqtabAll)) # Fix discrepancy
+all(rownames(SeqtabAll) %in% SAMDF$sample_number) # TRUE
+```
+
+
+```{r}
+rownames(SAMDF) <- SAMDF$Run
+keep.cols <- c("Run",	"BioSample",	"BioSampleModel",	"Host",	"Sample Name",	"sample_number")
+SAMDF <- SAMDF[rownames(SeqtabAll), keep.cols]
+```
+
+
+```{r}
+library("phyloseq")
+ps <- phyloseq(otu_table(SeqtabNoC, taxa_are_rows=FALSE), sample_names(SAMDF), tax_table(TaxTab),phy_tree(FitGTR$tree)) 
+ps <- prune_samples(sample_names(ps) != "Mock", ps) # Remove mock sample
+ps
+```
+
+
+
+```{r}
+# Show available ranks in the dataset
+rank_names(ps)
+```
+
+```{r}
+# Create table, number of features for each phyla
+table(tax_table(ps)[, "Phylum"], exclude = NULL)
+```
+
+```{r}
+ps <- subset_taxa(ps, !is.na(Phylum) & !Phylum %in% c("", "uncharacterized"))
+```
+
+```{r}
+# Compute prevalence of each feature, store as data.frame
+prevdf = apply(X = otu_table(ps),
+               MARGIN = ifelse(taxa_are_rows(ps), yes = 1, no = 2),
+               FUN = function(x){sum(x > 0)})
+# Add taxonomy and total read counts to this data.frame
+prevdf = data.frame(Prevalence = prevdf,
+                    TotalAbundance = taxa_sums(ps),
+                    tax_table(ps))
+```
+
+```{r}
+plyr::ddply(prevdf, "Phylum", function(df1){cbind(mean(df1$Prevalence),sum(df1$Prevalence))})
+```
+```{r}
+# Define phyla to filter
+filterPhyla = c("Fusobacteria", "Deinococcus-Thermus")
+# Filter entries with unidentified Phylum.
+ps1 = subset_taxa(ps, !Phylum %in% filterPhyla)
+ps1
+```
+
+```{r}
+prevdf1 = subset(prevdf, Phylum %in% get_taxa_unique(ps1, "Phylum"))
+ggplot(prevdf1, aes(TotalAbundance, Prevalence / nsamples(ps),color=Phylum)) +
+  # Include a guess for parameter
+  geom_hline(yintercept = 0.05, alpha = 0.5, linetype = 2) +  geom_point(size = 2, alpha = 0.7) +
+  scale_x_log10() +  xlab("Total Abundance") + ylab("Prevalence [Frac. Samples]") +
+  facet_wrap(~Phylum) + theme(legend.position="none")
+```
+
+```{r}
+# Define prevalence threshold as 5% of total samples
+prevalenceThreshold = 0.05 * nsamples(ps)
+prevalenceThreshold
+```
+
+```{r}
+# Execute prevalence filter, using `prune_taxa()` function
+keepTaxa = rownames(prevdf1)[(prevdf1$Prevalence >= prevalenceThreshold)]
+ps2 = prune_taxa(keepTaxa, ps)
+```
+
+```{r}
+# Show available ranks in the dataset
+rank_names(ps)
+```
+```{r}
+# Create table, number of features for each phyla
+```
+
+```{r}
+table(tax_table(ps)[, "Phylum"], exclude = NULL)
+```
+
+
+```{r}
+ps <- subset_taxa(ps, !is.na(Phylum) & !Phylum %in% c("", "uncharacterized"))
+```
+
+```{r}
+# Compute prevalence of each feature, store as data.frame
+prevdf = apply(X = otu_table(ps),
+               MARGIN = ifelse(taxa_are_rows(ps), yes = 1, no = 2),
+               FUN = function(x){sum(x > 0)})
+# Add taxonomy and total read counts to this data.frame
+prevdf = data.frame(Prevalence = prevdf,
+                    TotalAbundance = taxa_sums(ps),
+                    tax_table(ps))
+```
+
+```{r}
+plyr::ddply(prevdf, "Phylum", function(df1){cbind(mean(df1$Prevalence),sum(df1$Prevalence))})
+```
+
+```{r}
+# Define phyla to filter
+filterPhyla = c("Fusobacteria", "Deinococcus-Thermus")
+# Filter entries with unidentified Phylum.
+ps1 = subset_taxa(ps, !Phylum %in% filterPhyla)
+ps1
+```
+
+```{r}
+# Subset to the remaining phyla
+prevdf1 = subset(prevdf, Phylum %in% get_taxa_unique(ps1, "Phylum"))
+ggplot(prevdf1, aes(TotalAbundance, Prevalence / nsamples(ps),color=Phylum)) +
+  # Include a guess for parameter
+  geom_hline(yintercept = 0.05, alpha = 0.5, linetype = 2) +  geom_point(size = 2, alpha = 0.7) +
+  scale_x_log10() +  xlab("Total Abundance") + ylab("Prevalence [Frac. Samples]") +
+  facet_wrap(~Phylum) + theme(legend.position="none")
+```
+
+```{r}
+# Define prevalence threshold as 5% of total samples
+prevalenceThreshold = 0.05 * nsamples(ps)
+prevalenceThreshold
+```
+
+```{r}
+# Execute prevalence filter, using `prune_taxa()` function
+keepTaxa = rownames(prevdf1)[(prevdf1$Prevalence >= prevalenceThreshold)]
+ps2 = prune_taxa(keepTaxa, ps)
+```
+
+```{r}
+# How many genera would be present after filtering?
+```
+
+
+```{r}
+length(get_taxa_unique(ps2, taxonomic.rank = "Genus"))
+```
+
+```{r}
+ps3 = tax_glom(ps2, "Genus", NArm = TRUE)
+```
+
+```{r}
+h1 = 0.4
+ps4 = tip_glom(ps2, h = h1)
+```
+
+```{r}
+multiPlotTitleTextSize = 15
+p2tree = plot_tree(ps2, method = "treeonly",
+                   ladderize = "left",
+                   title = "Before Agglomeration") +
+  theme(plot.title = element_text(size = multiPlotTitleTextSize))
+p3tree = plot_tree(ps3, method = "treeonly",
+                   ladderize = "left", title = "By Genus") +
+  theme(plot.title = element_text(size = multiPlotTitleTextSize))
+p4tree = plot_tree(ps4, method = "treeonly",
+                   ladderize = "left", title = "By Height") +
+  theme(plot.title = element_text(size = multiPlotTitleTextSize))
+```
+
